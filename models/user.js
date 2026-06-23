@@ -10,13 +10,6 @@ const { conndbaccounts } = require('../db_connect')
 const MAX_LOGIN_ATTEMPTS = 5
 const LOCK_TIME = 2 * 60 * 60 * 1000
 
-const InfoVerifiedSchema = Schema({
-	isVerified: {type: Boolean, default: false},
-	status: { type: String, default: 'Not started' },
-	url: { type: String, default: null },
-	info: {type: Object, default: {}}
-})
-
 const UserSchema = Schema({
 	email: {
 		type: String,
@@ -49,13 +42,7 @@ const UserSchema = Schema({
 	platform: { type: String, default: '' },
 	countryselectedPhoneCode: { type: String, default: '' },
 	phone: { type: String, default: '' },
-	provider: { type: String, default: '' },
-	infoVerified:{
-		type: InfoVerifiedSchema, default:{
-			isVerified:false,
-			info: {}
-		}
-	}
+	provider: { type: String, default: '' }
 })
 
 
