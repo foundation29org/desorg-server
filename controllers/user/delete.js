@@ -22,18 +22,18 @@ function deleteAccount (req, res){
 }
 
 
-function deleteUser (res, userId){
-	User.findById(userId, (err, user) => {
-		if (err) return res.status(500).send({message: `Error deleting the case: ${err}`})
+async function deleteUser (res, userId){
+	try {
+		const user = await User.findById(userId);
 		if(user){
-			user.deleteOne(err => {
-				if(err) return res.status(500).send({message: `Error deleting the case: ${err}`})
-				res.status(200).send({message: `The case has been eliminated`})
-			})
+			await user.deleteOne();
+			res.status(200).send({message: `The case has been eliminated`})
 		}else{
-			 return res.status(202).send({message: 'The case has been eliminated'})
+			return res.status(202).send({message: 'The case has been eliminated'})
 		}
-	})
+	} catch (err) {
+		return res.status(500).send({message: `Error deleting the case: ${err}`})
+	}
 }
 
 

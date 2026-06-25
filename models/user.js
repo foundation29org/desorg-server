@@ -74,13 +74,13 @@ UserSchema.methods.comparePassword = function (candidatePassword, cb) {
 	});
 }
 
-UserSchema.methods.incLoginAttempts = function (cb) {
+UserSchema.methods.incLoginAttempts = async function () {
 	// if we have a previous lock that has expired, restart at 1
 	if (this.lockUntil && this.lockUntil < Date.now()) {
 		return this.updateOne({
 			$set: { loginAttempts: 1 },
 			$unset: { lockUntil: 1 }
-		}, cb);
+		});
 	}
 	// otherwise we're incrementing
 	var updates = { $inc: { loginAttempts: 1 } };
@@ -88,7 +88,7 @@ UserSchema.methods.incLoginAttempts = function (cb) {
 	if (this.loginAttempts + 1 >= MAX_LOGIN_ATTEMPTS && !this.isLocked) {
 		updates.$set = { lockUntil: Date.now() + LOCK_TIME };
 	}
-	return this.updateOne(updates, cb);
+	return this.updateOne(updates);
 };
 
 // expose enum on the model, and provide an internal convenience reference
@@ -102,69 +102,59 @@ var reasons = UserSchema.statics.failedLogin = {
 };
 
 UserSchema.statics.getAuthenticated = function (email, password, cb) {
-	this.findOne({ email: email }, function (err, user) {
-		if (err) return cb(err);
-
-		// make sure the user exists
-		if (!user) {
-			return cb(null, null, reasons.NOT_FOUND);
-		}
-		console.log(user.role);
-		if (user.role != 'User' && user.role != 'Admin' && user.role != 'SuperAdmin') {
-			return cb(null, null, reasons.WRONG_PLATFORM);
-		}
-		//Check if the account is activated.
-		if (!user.confirmed) {
-			return cb(null, null, reasons.UNACTIVATED);
-		}
-		if (user.blockedaccount) {
-			return cb(null, null, reasons.BLOCKED);
-		}
-		// check if the account is currently locked
-		if (user.isLocked) {
-			// just increment login attempts if account is already locked
-			return user.incLoginAttempts(function (err) {
-				if (err) return cb(err);
+	const self = this;
+	const reasons = UserSchema.statics.failedLogin;
+	(async () => {
+		try {
+			const user = await self.findOne({ email: email }).select('_id email +password loginAttempts lockUntil confirmed lastLogin role subrole userName lang randomCodeRecoverPass dateTimeRecoverPass group blockedaccount permissions platform shared');
+			if (!user) {
+				return cb(null, null, reasons.NOT_FOUND);
+			}
+			console.log(user.role);
+			if (user.role != 'User' && user.role != 'Admin' && user.role != 'SuperAdmin') {
+				return cb(null, null, reasons.WRONG_PLATFORM);
+			}
+			if (!user.confirmed) {
+				return cb(null, null, reasons.UNACTIVATED);
+			}
+			if (user.blockedaccount) {
+				return cb(null, null, reasons.BLOCKED);
+			}
+			if (user.isLocked) {
+				await user.incLoginAttempts();
 				return cb(null, null, reasons.MAX_ATTEMPTS);
-			});
-		}
-
-		// test for a matching password
-		user.comparePassword(password, function (err, isMatch) {
-			if (err) return cb(err);
-
-
-			// check if the password was a match
-			if (isMatch) {
-				// if there's no lock or failed attempts, just return the user
-				if (!user.loginAttempts && !user.lockUntil) {
-					var updates = {
-						$set: { lastLogin: Date.now() }
-					};
-					return user.updateOne(updates, function (err) {
-						if (err) return cb(err);
-						return cb(null, user);
-					});
-					return cb(null, user)
-				}
-				// reset attempts and lock info
-				var updates = {
-					$set: { loginAttempts: 0, lastLogin: Date.now() },
-					$unset: { lockUntil: 1 }
-				};
-				return user.updateOne(updates, function (err) {
-					if (err) return cb(err);
-					return cb(null, user);
-				});
 			}
 
-			// password is incorrect, so increment login attempts before responding
-			user.incLoginAttempts(function (err) {
+			user.comparePassword(password, async (err, isMatch) => {
 				if (err) return cb(err);
-				return cb(null, null, reasons.PASSWORD_INCORRECT);
+
+				if (isMatch) {
+					try {
+						if (!user.loginAttempts && !user.lockUntil) {
+							await user.updateOne({ $set: { lastLogin: Date.now() } });
+						} else {
+							await user.updateOne({
+								$set: { loginAttempts: 0, lastLogin: Date.now() },
+								$unset: { lockUntil: 1 }
+							});
+						}
+						return cb(null, user);
+					} catch (updateErr) {
+						return cb(updateErr);
+					}
+				}
+
+				try {
+					await user.incLoginAttempts();
+					return cb(null, null, reasons.PASSWORD_INCORRECT);
+				} catch (incErr) {
+					return cb(incErr);
+				}
 			});
-		});
-	}).select('_id email +password loginAttempts lockUntil confirmed lastLogin role subrole userName lang randomCodeRecoverPass dateTimeRecoverPass group blockedaccount permissions platform shared');
+		} catch (err) {
+			cb(err);
+		}
+	})();
 };
 
 module.exports = conndbaccounts.model('User', UserSchema)
