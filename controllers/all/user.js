@@ -8,7 +8,7 @@ const Support = require('../../models/support')
 const serviceAuth = require('../../services/auth')
 const serviceEmail = require('../../services/email')
 const crypt = require('../../services/crypt')
-const bcrypt = require('bcrypt-nodejs')
+const bcrypt = require('bcryptjs')
 
 function activateUser(req, res) {
 	req.body.email = (req.body.email).toLowerCase();
@@ -188,7 +188,7 @@ function updatePass(req, res) {
 
 					bcrypt.genSalt(10, (err, salt) => {
 						if (err) return res.status(500).send({ message: 'error salt' })
-						bcrypt.hash(userToSave.password, salt, null, (err, hash) => {
+						bcrypt.hash(userToSave.password, salt, (err, hash) => {
 							if (err) return res.status(500).send({ message: 'error hash' })
 
 							userToSave.password = hash
@@ -278,7 +278,7 @@ function newPass(req, res) {
 		if (userToUpdate) {
 			bcrypt.genSalt(10, (err, salt) => {
 				if (err) return res.status(500).send({ message: 'error salt' })
-				bcrypt.hash(req.body.newpassword, salt, null, (err, hash) => {
+				bcrypt.hash(req.body.newpassword, salt, (err, hash) => {
 					if (err) return res.status(500).send({ message: 'error hash' })
 
 					userToUpdate.password = hash
