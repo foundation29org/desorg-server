@@ -206,7 +206,7 @@ function deletelang (req, res){
 				Lang.findOne({code: code},(err, langFound) => {
 					if (err) return res.status(500).send({message: `Error deleting the lang: ${err}`})
 					if(langFound){
-						langFound.remove(err => {
+						langFound.deleteOne(err => {
 								if(err) res.status(202).send({message: 'error, not found'})
 								res.status(200).send({message: 'deleted'})
 							})

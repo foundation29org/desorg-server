@@ -26,7 +26,7 @@ function deleteUser (res, userId){
 	User.findById(userId, (err, user) => {
 		if (err) return res.status(500).send({message: `Error deleting the case: ${err}`})
 		if(user){
-			user.remove(err => {
+			user.deleteOne(err => {
 				if(err) return res.status(500).send({message: `Error deleting the case: ${err}`})
 				res.status(200).send({message: `The case has been eliminated`})
 			})

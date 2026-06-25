@@ -77,7 +77,7 @@ UserSchema.methods.comparePassword = function (candidatePassword, cb) {
 UserSchema.methods.incLoginAttempts = function (cb) {
 	// if we have a previous lock that has expired, restart at 1
 	if (this.lockUntil && this.lockUntil < Date.now()) {
-		return this.update({
+		return this.updateOne({
 			$set: { loginAttempts: 1 },
 			$unset: { lockUntil: 1 }
 		}, cb);
@@ -88,7 +88,7 @@ UserSchema.methods.incLoginAttempts = function (cb) {
 	if (this.loginAttempts + 1 >= MAX_LOGIN_ATTEMPTS && !this.isLocked) {
 		updates.$set = { lockUntil: Date.now() + LOCK_TIME };
 	}
-	return this.update(updates, cb);
+	return this.updateOne(updates, cb);
 };
 
 // expose enum on the model, and provide an internal convenience reference
@@ -141,7 +141,7 @@ UserSchema.statics.getAuthenticated = function (email, password, cb) {
 					var updates = {
 						$set: { lastLogin: Date.now() }
 					};
-					return user.update(updates, function (err) {
+					return user.updateOne(updates, function (err) {
 						if (err) return cb(err);
 						return cb(null, user);
 					});
@@ -152,7 +152,7 @@ UserSchema.statics.getAuthenticated = function (email, password, cb) {
 					$set: { loginAttempts: 0, lastLogin: Date.now() },
 					$unset: { lockUntil: 1 }
 				};
-				return user.update(updates, function (err) {
+				return user.updateOne(updates, function (err) {
 					if (err) return cb(err);
 					return cb(null, user);
 				});

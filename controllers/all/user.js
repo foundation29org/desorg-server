@@ -716,7 +716,7 @@ function deleteUser(req, res) {
 	User.findById(userId, (err, user) => {
 		if (err) return res.status(500).send({ message: `Error deleting the user: ${err}` })
 		if (user) {
-			user.remove(err => {
+			user.deleteOne(err => {
 				if (err) return res.status(500).send({ message: `Error deleting the user: ${err}` })
 				res.status(200).send({ message: `The user has been deleted.` })
 			})
