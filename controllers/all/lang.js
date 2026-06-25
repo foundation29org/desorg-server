@@ -52,9 +52,10 @@ const crypt = require('../../services/crypt')
  *   }
  * ]
  */
-function getLangs (req, res){
-	Lang.find({}, function(err, langs) {
-    var listLangs = [];
+async function getLangs (req, res){
+	try {
+		const langs = await Lang.find({});
+		var listLangs = [];
 
 		if(langs!=undefined){
 			langs.forEach(function(lang) {
@@ -62,10 +63,12 @@ function getLangs (req, res){
 					listLangs.push({name:lang.name, code: lang.code});
 				}
 
-	    });
+			});
 		}
-    res.status(200).send(listLangs)
-  });
+		res.status(200).send(listLangs)
+	} catch (err) {
+		res.status(500).send({message: `Error making the request: ${err}`})
+	}
 }
 
 module.exports = {
